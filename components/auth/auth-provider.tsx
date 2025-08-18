@@ -5,29 +5,49 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
-import type { Profile } from "@/lib/supabase"
 
-type UserRole = "user" | "admin"
+
+
+// Minimal type for user_profiles
+type UserProfile = {
+  user_id: string;
+  designation: string;
+  company_name?: string;
+  fname?: string;
+  lname?: string;
+};
+
+
+type UserRole = "user" | "admin" | "agent" | "developer";
 
 interface AuthContextType {
-  user: User | null
-  profile: Profile | null
-  role: UserRole | null
-  loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: any }>
-  signUp: (email: string, password: string, fullName: string, role?: UserRole) => Promise<{ error: any }>
-  signOut: () => Promise<void>
-  updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>
-  resetPassword: (email: string) => Promise<{ error: any }>
-  updatePassword: (password: string) => Promise<{ error: any }>
-  resendConfirmation: (email: string) => Promise<{ error: any }>
+  user: User | null;
+  profile: UserProfile | null;
+  role: UserRole | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    role?: UserRole,
+    phone?: string,
+    company?: string,
+    firstName?: string,
+    lastName?: string
+  ) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: any }>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
+  updatePassword: (password: string) => Promise<{ error: any }>;
+  resendConfirmation: (email: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [role, setRole] = useState<UserRole | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -75,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+      const { data, error } = await supabase.from("user_profiles").select("*").eq("user_id", userId).single()
 
       if (error) throw error
       setProfile(data)
@@ -94,14 +114,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error }
   }
 
-  const signUp = async (email: string, password: string, fullName: string, role: UserRole = "user") => {
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    role: UserRole = "user",
+    phone?: string,
+    company?: string,
+    firstName?: string,
+    lastName?: string
+  ) => {
+    // Only create user in auth.users, let trigger handle user_profiles
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          full_name: fullName,
+          display_name: fullName,
+          phone: phone || null,
           role: role,
+          company: company || null,
+          fname: firstName || null,
+          lname: lastName || null,
         },
         emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback`,
       },
@@ -126,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error }
   }
 
+
   const resendConfirmation = async (email: string) => {
     const { error } = await supabase.auth.resend({
       type: "signup",
@@ -137,13 +172,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error }
   }
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return { error: "No user logged in" }
 
-    const { error } = await supabase.from("profiles").update(updates).eq("id", user.id)
+    const { error } = await supabase.from("user_profiles").update(updates).eq("user_id", user.id)
 
     if (!error) {
-      setProfile((prev) => (prev ? { ...prev, ...updates } : null))
+      setProfile((prev: UserProfile | null) => (prev ? { ...prev, ...updates } : null))
     }
 
     return { error }

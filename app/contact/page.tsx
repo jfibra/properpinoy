@@ -1,3 +1,5 @@
+"use client";
+import { useState } from "react"
 import { PublicNav } from "@/components/public/public-nav"
 import { Footer } from "@/components/landing/footer"
 import { Button } from "@/components/ui/button"
@@ -5,8 +7,74 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
+import { supabase } from "@/lib/supabase"
+import Swal from "sweetalert2"
+
 
 export default function ContactPage() {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [company, setCompany] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  // No need for alert state, use SweetAlert2 instead
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Email",
+        text: "Please enter a valid email address.",
+        confirmButtonColor: "#dc2626"
+      });
+      setLoading(false);
+      return;
+    }
+    // Compose the full name
+    const name = `${firstName} ${lastName}`.trim();
+    try {
+      const { error } = await supabase.from("contact").insert([
+        {
+          name,
+          email,
+          message,
+          first_name: firstName,
+          last_name: lastName,
+          phone,
+          company
+        }
+      ]);
+      if (error) throw error;
+      Swal.fire({
+        icon: "success",
+        title: "Message Sent!",
+        text: "Your message has been sent! We'll get back to you soon.",
+        confirmButtonColor: "#059669"
+      });
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPhone("");
+      setCompany("");
+      setMessage("");
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Something went wrong. Please try again.",
+        confirmButtonColor: "#dc2626"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50">
       <PublicNav />
@@ -32,38 +100,42 @@ export default function ContactPage() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">First Name</label>
-                    <Input placeholder="Juan" />
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">First Name</label>
+                      <Input placeholder="Juan" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">Last Name</label>
+                      <Input placeholder="Dela Cruz" value={lastName} onChange={e => setLastName(e.target.value)} required />
+                    </div>
                   </div>
+
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">Last Name</label>
-                    <Input placeholder="Dela Cruz" />
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Email Address</label>
+                    <Input type="email" placeholder="juan@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
-                </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Email Address</label>
-                  <Input type="email" placeholder="juan@example.com" />
-                </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Phone Number</label>
+                    <Input placeholder="+63 912 345 6789" value={phone} onChange={e => setPhone(e.target.value)} />
+                  </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Phone Number</label>
-                  <Input placeholder="+63 912 345 6789" />
-                </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Company/Agency (Optional)</label>
+                    <Input placeholder="ABC Realty" value={company} onChange={e => setCompany(e.target.value)} />
+                  </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Company/Agency (Optional)</label>
-                  <Input placeholder="ABC Realty" />
-                </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Message</label>
+                    <Textarea placeholder="Tell us about your properties and how we can help you..." rows={4} value={message} onChange={e => setMessage(e.target.value)} required />
+                  </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Message</label>
-                  <Textarea placeholder="Tell us about your properties and how we can help you..." rows={4} />
-                </div>
-
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700">Send Message</Button>
+                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700" type="submit" disabled={loading}>
+                    {loading ? "Sending..." : "Send Message"}
+                  </Button>
+                </form>
               </CardContent>
             </Card>
 
