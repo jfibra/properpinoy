@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -120,4 +120,43 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Added smooth scrolling and improved typography */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Added property-specific styles for better image handling */
+  .property-image {
+    @apply object-cover w-full h-full;
+  }
+
+  /* Added animation utilities for property cards */
+  .property-card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  /* Added styles for form validation states */
+  .form-error {
+    @apply text-destructive text-sm mt-1;
+  }
+
+  .form-success {
+    @apply text-green-600 text-sm mt-1;
+  }
+}
+
+/* Added custom animations for loading states */
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
